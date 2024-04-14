@@ -7,11 +7,13 @@ import (
 
 type Peer struct {
 	connection net.Conn
+	msgChan    chan []byte
 }
 
-func NewPeer(connection net.Conn) *Peer {
+func NewPeer(connection net.Conn, msgChan chan []byte) *Peer {
 	return &Peer{
 		connection: connection,
+		msgChan:    msgChan,
 	}
 }
 
@@ -23,6 +25,8 @@ func (p *Peer) read() error {
 			slog.Error("peer read error", "err", err)
 			return err
 		}
-		msg := buffer[:bytesRead]
+		msgBuf := make([]byte, bytesRead)
+		copy(msgBuf, buffer)
+		p.msgChan <- msgBuf
 	}
 }

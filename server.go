@@ -16,6 +16,7 @@ type Server struct {
 	peers       map[*Peer]bool
 	addPeerChan chan *Peer
 	quitChan    chan struct{}
+	msgChan     chan []byte
 	listener    net.Listener
 	Config
 }
@@ -29,6 +30,7 @@ func NewServer(cfg Config) *Server {
 		peers:       make(map[*Peer]bool),
 		addPeerChan: make(chan *Peer),
 		quitChan:    make(chan struct{}),
+		msgChan:     make(chan []byte),
 	}
 }
 
@@ -60,6 +62,10 @@ func (s *Server) accept() error {
 func (s *Server) loop() {
 	for {
 		select {
+		case rawMsg := <-s.msgChan:
+			if err := s.handleRawMessage(rawMsg); err != nil {
+				slog.Error("raw message error", "err", err)
+			}
 		case <-s.quitChan:
 			return
 		case peer := <-s.addPeerChan:
@@ -69,10 +75,15 @@ func (s *Server) loop() {
 }
 
 func (s *Server) handleConnection(connection net.Conn) {
-	peer := NewPeer(connection)
+	peer := NewPeer(connection, s.msgChan)
 	s.addPeerChan <- peer
 	slog.Info("new peer connected", "remote address", connection.RemoteAddr().String())
 	if err := peer.read(); err != nil {
 		slog.Error("peer read error", "err", err, "remote address", connection.RemoteAddr().String())
 	}
+}
+
+func (s *Server) handleRawMessage(rawMessage []byte) error {
+	slog.Info("handle raw message", "msg", string(rawMessage))
+	return nil
 }
