@@ -62,8 +62,8 @@ func (s *Server) accept() error {
 func (s *Server) loop() {
 	for {
 		select {
-		case rawMsg := <-s.msgChan:
-			if err := s.handleRawMessage(rawMsg); err != nil {
+		case rawMessage := <-s.msgChan:
+			if err := s.handleRawMessage(rawMessage); err != nil {
 				slog.Error("raw message error", "err", err)
 			}
 		case <-s.quitChan:
@@ -85,5 +85,10 @@ func (s *Server) handleConnection(connection net.Conn) {
 
 func (s *Server) handleRawMessage(rawMessage []byte) error {
 	slog.Info("handle raw message", "msg", string(rawMessage))
+	cmd, err := ParseCommand(string(rawMessage))
+	if err != nil {
+		return err
+	}
+	slog.Info("parsed comand", "cmd", cmd)
 	return nil
 }
