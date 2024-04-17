@@ -15,7 +15,7 @@ func Test_ParseCommand(t *testing.T) {
 		want    Command
 		wantErr bool
 	}{
-		{"case 1", args{"*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"}, SetCommand{key: "foo", value: "bar"}, false},
+		{"case 1", args{"*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"}, SetCommand{key: []byte("foo"), value: []byte("bar")}, false},
 		{"case 2", args{"*4\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$3\r\nbaz\r\n"}, nil, true},
 	}
 	for _, tt := range tests {

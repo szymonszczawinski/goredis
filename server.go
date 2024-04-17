@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"net"
 )
@@ -12,12 +13,18 @@ const (
 type Config struct {
 	ListenAddress string
 }
+
+type Message struct {
+	peer *Peer
+	data []byte
+}
 type Server struct {
 	peers       map[*Peer]bool
 	addPeerChan chan *Peer
 	quitChan    chan struct{}
-	msgChan     chan []byte
+	msgChan     chan Message
 	listener    net.Listener
+	kv          *ValKey
 	Config
 }
 
@@ -30,7 +37,8 @@ func NewServer(cfg Config) *Server {
 		peers:       make(map[*Peer]bool),
 		addPeerChan: make(chan *Peer),
 		quitChan:    make(chan struct{}),
-		msgChan:     make(chan []byte),
+		msgChan:     make(chan Message),
+		kv:          NewValKey(),
 	}
 }
 
@@ -62,8 +70,8 @@ func (s *Server) accept() error {
 func (s *Server) loop() {
 	for {
 		select {
-		case rawMessage := <-s.msgChan:
-			if err := s.handleRawMessage(rawMessage); err != nil {
+		case msg := <-s.msgChan:
+			if err := s.handleMessage(msg); err != nil {
 				slog.Error("raw message error", "err", err)
 			}
 		case <-s.quitChan:
@@ -83,12 +91,27 @@ func (s *Server) handleConnection(connection net.Conn) {
 	}
 }
 
-func (s *Server) handleRawMessage(rawMessage []byte) error {
-	slog.Info("handle raw message", "msg", string(rawMessage))
-	cmd, err := ParseCommand(string(rawMessage))
+func (s *Server) handleMessage(message Message) error {
+	cmd, err := ParseCommand(string(message.data))
 	if err != nil {
+		slog.Error("parse command error", "err", err)
 		return err
 	}
-	slog.Info("parsed comand", "cmd", cmd)
+	slog.Info("parsed command", "cmd", cmd)
+	switch v := cmd.(type) {
+	case SetCommand:
+		return s.kv.Set(string(v.key), v.value)
+	case GetCommand:
+		value, ok := s.kv.Get(string(v.key))
+		if !ok {
+			return fmt.Errorf("key not found %v", v.key)
+		}
+		_, err := message.peer.Send(value)
+		if err != nil {
+			slog.Error("peer send error", "err", err)
+			return err
+		}
+
+	}
 	return nil
 }
