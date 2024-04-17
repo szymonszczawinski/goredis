@@ -16,15 +16,15 @@ type Config struct {
 
 type Message struct {
 	peer *Peer
-	data []byte
+	cmd  Command
 }
 type Server struct {
-	peers       map[*Peer]bool
-	addPeerChan chan *Peer
-	quitChan    chan struct{}
-	msgChan     chan Message
-	listener    net.Listener
-	kv          *ValKey
+	peers          map[*Peer]bool
+	addPeerChannel chan *Peer
+	quitChannel    chan struct{}
+	messageChannel chan Message
+	listener       net.Listener
+	storage        *ValKey
 	Config
 }
 
@@ -33,12 +33,12 @@ func NewServer(cfg Config) *Server {
 		cfg.ListenAddress = defaultListenAddress
 	}
 	return &Server{
-		Config:      cfg,
-		peers:       make(map[*Peer]bool),
-		addPeerChan: make(chan *Peer),
-		quitChan:    make(chan struct{}),
-		msgChan:     make(chan Message),
-		kv:          NewValKey(),
+		Config:         cfg,
+		peers:          make(map[*Peer]bool),
+		addPeerChannel: make(chan *Peer),
+		quitChannel:    make(chan struct{}),
+		messageChannel: make(chan Message),
+		storage:        NewValKey(),
 	}
 }
 
@@ -70,39 +70,33 @@ func (s *Server) accept() error {
 func (s *Server) loop() {
 	for {
 		select {
-		case msg := <-s.msgChan:
-			if err := s.handleMessage(msg); err != nil {
+		case message := <-s.messageChannel:
+			if err := s.handleMessage(message); err != nil {
 				slog.Error("raw message error", "err", err)
 			}
-		case <-s.quitChan:
+		case <-s.quitChannel:
 			return
-		case peer := <-s.addPeerChan:
+		case peer := <-s.addPeerChannel:
 			s.peers[peer] = true
 		}
 	}
 }
 
 func (s *Server) handleConnection(connection net.Conn) {
-	peer := NewPeer(connection, s.msgChan)
-	s.addPeerChan <- peer
+	peer := NewPeer(connection, s.messageChannel)
+	s.addPeerChannel <- peer
 	slog.Info("new peer connected", "remote address", connection.RemoteAddr().String())
-	if err := peer.read(); err != nil {
+	if err := peer.ReadLoop(); err != nil {
 		slog.Error("peer read error", "err", err, "remote address", connection.RemoteAddr().String())
 	}
 }
 
 func (s *Server) handleMessage(message Message) error {
-	cmd, err := ParseCommand(string(message.data))
-	if err != nil {
-		slog.Error("parse command error", "err", err)
-		return err
-	}
-	slog.Info("parsed command", "cmd", cmd)
-	switch v := cmd.(type) {
+	switch v := message.cmd.(type) {
 	case SetCommand:
-		return s.kv.Set(string(v.key), v.value)
+		return s.storage.Set(string(v.key), v.value)
 	case GetCommand:
-		value, ok := s.kv.Get(string(v.key))
+		value, ok := s.storage.Get(string(v.key))
 		if !ok {
 			return fmt.Errorf("key not found %v", v.key)
 		}

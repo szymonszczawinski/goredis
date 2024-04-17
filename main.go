@@ -22,7 +22,7 @@ func main() {
 	client := client.NewClinet("localhost:3000")
 	for i := 0; i < 5; i++ {
 		client.Set(context.TODO(), fmt.Sprintf("hello %v", i), "world")
-		time.Sleep(time.Millisecond)
+		// time.Sleep(time.Millisecond)
 	}
 
 	val, err := client.Get(context.TODO(), "hello 0")
@@ -32,5 +32,5 @@ func main() {
 	slog.Info("clinet read value", "val", val)
 
 	time.Sleep(5 * time.Second)
-	fmt.Println(server.kv.data)
+	fmt.Println(server.storage.data)
 }
