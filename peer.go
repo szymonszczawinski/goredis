@@ -38,33 +38,34 @@ func (p *Peer) ReadLoop() error {
 		}
 		if value.Type() == resp.Array {
 			valuesArray := value.Array()
+			var cmd Command
 			switch valuesArray[0].String() {
 			case CommandSET:
 				if len(valuesArray) != 3 {
 					return fmt.Errorf("invalid number of variables for SET command")
 				}
-				cmd := SetCommand{
+				cmd = SetCommand{
 					key:   valuesArray[1].Bytes(),
 					value: valuesArray[2].Bytes(),
 				}
 				slog.Info("got SET cmd", "cmd", cmd)
-				p.messageChannel <- Message{
-					cmd:  cmd,
-					peer: p,
-				}
 			case CommandGET:
 				if len(valuesArray) != 2 {
 					return fmt.Errorf("invalid number of variables for GET command")
 				}
 
-				cmd := GetCommand{
+				cmd = GetCommand{
 					key: valuesArray[1].Bytes(),
 				}
 				slog.Info("got GET cmd", "cmd", cmd)
-				p.messageChannel <- Message{
-					cmd:  cmd,
-					peer: p,
+			case CommandHELLO:
+				cmd = HelloCommand{
+					value: valuesArray[1].String(),
 				}
+			}
+			p.messageChannel <- Message{
+				cmd:  cmd,
+				peer: p,
 			}
 
 		}

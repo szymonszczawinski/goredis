@@ -98,14 +98,24 @@ func (s *Server) handleMessage(message Message) error {
 	case GetCommand:
 		value, ok := s.storage.Get(string(v.key))
 		if !ok {
+			slog.Error("get key not found", "key", v.key)
 			return fmt.Errorf("key not found %v", v.key)
 		}
 		_, err := message.peer.Send(value)
 		if err != nil {
 			slog.Error("peer send error", "err", err)
-			return err
+			return fmt.Errorf("peer send error %w", err)
 		}
-
+	case HelloCommand:
+		spec := map[string]string{
+			"server": "redis",
+			"role":   "master",
+		}
+		_, err := message.peer.Send([]byte(respWriteMap(spec)))
+		if err != nil {
+			slog.Error("handle message hello error", "err", err)
+			return fmt.Errorf("peer send error %w", err)
+		}
 	}
 	return nil
 }

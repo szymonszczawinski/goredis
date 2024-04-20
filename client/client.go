@@ -33,7 +33,7 @@ func (c *Client) Get(ctx context.Context, key string) (string, error) {
 	wr := resp.NewWriter(&buff)
 
 	err := wr.WriteArray([]resp.Value{
-		resp.StringValue("GET"),
+		resp.StringValue("get"),
 		resp.StringValue(key),
 	})
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *Client) Set(ctx context.Context, key, val string) error {
 	wr := resp.NewWriter(&buff)
 
 	err := wr.WriteArray([]resp.Value{
-		resp.StringValue("SET"),
+		resp.StringValue("set"),
 		resp.StringValue(key),
 		resp.StringValue(val),
 	})
