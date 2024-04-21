@@ -116,8 +116,7 @@ func (s *Server) handleMessage(message Message) error {
 			slog.Error("get key not found", "key", v.key)
 			return fmt.Errorf("key not found %v", v.key)
 		}
-		_, err := message.peer.Send(value)
-		if err != nil {
+		if err := resp.NewWriter(message.peer.connection).WriteString(string(value)); err != nil {
 			slog.Error("peer send error", "err", err)
 			return fmt.Errorf("peer send error %w", err)
 		}

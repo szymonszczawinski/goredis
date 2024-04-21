@@ -16,9 +16,17 @@ func TestNewRedisClinet(t *testing.T) {
 	})
 	fmt.Println("TestNewRedisClinet run")
 	fmt.Println(rdb)
-	err := rdb.Set(context.Background(), "key", "value", 0).Err()
+	err := rdb.Set(context.Background(), "foo", "bar", 0).Err()
 	if err != nil {
-		panic(err)
+		fmt.Println("SET Fail", err)
+		t.Fail()
 	}
-	fmt.Println("OKOK PASS")
+
+	fmt.Println("SET PASS")
+	val, err := rdb.Get(context.Background(), "foo").Result()
+	if err != nil && val != "bar" {
+		fmt.Println("GET Fail", err)
+		t.Fail()
+	}
+	fmt.Println("GET PASS")
 }
