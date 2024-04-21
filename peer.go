@@ -40,6 +40,10 @@ func (p *Peer) ReadLoop() error {
 			valuesArray := value.Array()
 			var cmd Command
 			switch valuesArray[0].String() {
+			case CommandClient:
+				cmd = ClientCommand{
+					value: valuesArray[1].String(),
+				}
 			case CommandSET:
 				if len(valuesArray) != 3 {
 					return fmt.Errorf("invalid number of variables for SET command")
@@ -62,6 +66,9 @@ func (p *Peer) ReadLoop() error {
 				cmd = HelloCommand{
 					value: valuesArray[1].String(),
 				}
+			default:
+				fmt.Println("the value string angle => ", valuesArray[0])
+				fmt.Printf("got unknown command => %v\r\n", value.Array())
 			}
 			p.messageChannel <- Message{
 				cmd:  cmd,

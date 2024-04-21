@@ -20,4 +20,5 @@ func TestNewRedisClinet(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("OKOK PASS")
 }
